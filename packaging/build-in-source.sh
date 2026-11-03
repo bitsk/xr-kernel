@@ -10,4 +10,4 @@ export KBUILD_BUILD_USER=xr KBUILD_BUILD_HOST=build
 export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-0}
 make -C "$root" O="$build_dir" olddefconfig
 make -C "$root" O="$build_dir" KDEB_SOURCENAME=linux-xr KDEB_PKGVERSION="${XR_DEB_VERSION:-7.3.0+xr1}" -j"${JOBS:-4}" bindeb-pkg
-python3 "$root/packaging/build-uapi-deb.py" --output "$build_dir/../packages" --version "${XR_DEB_VERSION:-7.3.0+xr1}"
+python3 "$root/packaging/build-uapi-deb.py" --output "$build_dir/../packages" --version "${XR_DEB_VERSION:-7.3.0+xr1}" --kernel-release "$(make -s -C "$root" O="$build_dir" kernelrelease)"
