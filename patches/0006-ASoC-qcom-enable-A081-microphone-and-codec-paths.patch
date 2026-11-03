@@ -1,7 +1,7 @@
 From 83608fa00f912710ab0cc12e6665fa8b3ec383ce Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 06/13] ASoC: qcom: enable A081 microphone and codec paths
+Subject: [PATCH 06/14] ASoC: qcom: enable A081 microphone and codec paths
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

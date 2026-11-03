@@ -1,7 +1,7 @@
 From a2eeb8f53320f05b2bd234b79f94d14c93573df0 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 04/13] iio: imu: add Qualcomm SEE sensors for A081
+Subject: [PATCH 04/14] iio: imu: add Qualcomm SEE sensors for A081
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

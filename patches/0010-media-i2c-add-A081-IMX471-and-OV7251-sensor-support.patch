@@ -1,7 +1,7 @@
 From 2802228777b113891c1ff828f15f3beed40f4982 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:31 +0800
-Subject: [PATCH 10/13] media: i2c: add A081 IMX471 and OV7251 sensor support
+Subject: [PATCH 10/14] media: i2c: add A081 IMX471 and OV7251 sensor support
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

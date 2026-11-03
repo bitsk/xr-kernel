@@ -1,7 +1,7 @@
 From c0a15642a99d9b2512f19b548a04272afc5c414d Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:31 +0800
-Subject: [PATCH 11/13] media: qcom: add A081 CAMSS timing and exposure control
+Subject: [PATCH 11/14] media: qcom: add A081 CAMSS timing and exposure control
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

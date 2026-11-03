@@ -1,7 +1,7 @@
 From ac7a44ddbd494e241611f803eca3116e13ec3772 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 05/13] wifi: ath11k: support A081 WCN power and firmware
+Subject: [PATCH 05/14] wifi: ath11k: support A081 WCN power and firmware
  sequencing
 
 Split the existing A081 downstream source by subsystem.

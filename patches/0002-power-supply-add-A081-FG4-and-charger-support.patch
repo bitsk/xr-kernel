@@ -1,7 +1,7 @@
 From a046950e9942a6e3af1977a271b9e3130a3d0f99 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 02/13] power: supply: add A081 FG4 and charger support
+Subject: [PATCH 02/14] power: supply: add A081 FG4 and charger support
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

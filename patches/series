@@ -11,3 +11,4 @@
 0011-media-qcom-add-A081-CAMSS-timing-and-exposure-contro.patch
 0012-misc-add-the-A081-Nordic-controller-transport.patch
 0013-arm64-dts-qcom-add-the-IQIYI-A081-board.patch
+0014-packaging-maintain-isolated-XR-sources-and-openKylin.patch

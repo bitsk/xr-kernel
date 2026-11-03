@@ -1,0 +1,23 @@
+From 3eb8f3e11550b5df8d82761b306137a27763f955 Mon Sep 17 00:00:00 2001
+From: bits <bigbits@hackx.cc>
+Date: Tue, 3 Nov 2026 13:34:46 +0800
+Subject: [PATCH 14/14] packaging: maintain isolated XR sources and openKylin
+ packages
+
+---
+ scripts/package/mkdebian | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/scripts/package/mkdebian b/scripts/package/mkdebian
+index d4b007b38a4..7a598b8b58a 100755
+--- a/scripts/package/mkdebian
++++ b/scripts/package/mkdebian
+@@ -271,3 +271,8 @@ cp "${srctree}/scripts/package/debian/copyright" debian/
+ cp "${srctree}/scripts/package/debian/rules" debian/
+ 
+ exit 0
++
++# The XR adaptation exports only its own UAPI development package.
++if [ "$sourcename" = linux-xr ]; then
++	sed -i '/^Package: linux-libc-dev$/,/^$/d' debian/control
++fi

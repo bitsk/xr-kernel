@@ -1,7 +1,7 @@
 From 732c8d54623fd179b37178d9ed5d4792426d7483 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 07/13] misc: fastrpc: adapt the A081 DSP memory path
+Subject: [PATCH 07/14] misc: fastrpc: adapt the A081 DSP memory path
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

@@ -1,7 +1,7 @@
 From 37bca173bb742cef0c32ebd39dc1a0ad11aa7e68 Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:31 +0800
-Subject: [PATCH 08/13] drm: panel: add the IQIYI A081 panel driver
+Subject: [PATCH 08/14] drm: panel: add the IQIYI A081 panel driver
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;

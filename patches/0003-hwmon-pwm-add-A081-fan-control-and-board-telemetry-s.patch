@@ -1,7 +1,7 @@
 From c977f8f86708b1a5f2da8fefc2c08d406c978f8b Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:30 +0800
-Subject: [PATCH 03/13] hwmon: pwm: add A081 fan control and board telemetry
+Subject: [PATCH 03/14] hwmon: pwm: add A081 fan control and board telemetry
  support
 
 Split the existing A081 downstream source by subsystem.

@@ -1,7 +1,7 @@
 From 90ade8ff215b57a1c0c54c0cd14bfe06f490258f Mon Sep 17 00:00:00 2001
 From: bits <bigbits@hackx.cc>
 Date: Mon, 2 Nov 2026 15:04:31 +0800
-Subject: [PATCH 09/13] drm: msm: adapt A081 display, buffers and GMU startup
+Subject: [PATCH 09/14] drm: msm: adapt A081 display, buffers and GMU startup
 
 Split the existing A081 downstream source by subsystem.
 The final file contents match the archived device-baseline sources;
