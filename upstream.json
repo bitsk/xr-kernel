@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/torvalds/linux.git",
+  "commit": "c03c1a14507dfaf8b856c2608f9ac216021fc222",
+  "maintenance": "independent patch stack; genuine upstream history restored in prepared source",
+  "patch_series": "patches/series"
+}

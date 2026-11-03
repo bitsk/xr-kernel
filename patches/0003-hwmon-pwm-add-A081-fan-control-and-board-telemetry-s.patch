@@ -1,0 +1,434 @@
+From c977f8f86708b1a5f2da8fefc2c08d406c978f8b Mon Sep 17 00:00:00 2001
+From: bits <bigbits@hackx.cc>
+Date: Mon, 2 Nov 2026 15:04:30 +0800
+Subject: [PATCH 03/13] hwmon: pwm: add A081 fan control and board telemetry
+ support
+
+Split the existing A081 downstream source by subsystem.
+The final file contents match the archived device-baseline sources;
+this commit does not claim independent intermediate hardware acceptance.
+---
+ drivers/hwmon/pwm-fan.c          |  38 +++++----
+ drivers/iio/adc/qcom-spmi-adc5.c |   2 +
+ drivers/leds/rgb/leds-qcom-lpg.c | 130 +++++++++++++++++++++----------
+ drivers/pwm/core.c               |   7 +-
+ include/linux/pwm.h              |   2 +
+ 5 files changed, 124 insertions(+), 55 deletions(-)
+
+diff --git a/drivers/hwmon/pwm-fan.c b/drivers/hwmon/pwm-fan.c
+index c633d7f6464..5ab08d6f08f 100644
+--- a/drivers/hwmon/pwm-fan.c
++++ b/drivers/hwmon/pwm-fan.c
+@@ -173,31 +173,31 @@ static int pwm_fan_power_on(struct pwm_fan_ctx *ctx)
+ 
+ static int pwm_fan_power_off(struct pwm_fan_ctx *ctx, bool force_disable)
+ {
+-	struct pwm_state *state = &ctx->pwm_state;
++	struct pwm_state state = ctx->pwm_state;
+ 	bool enable_regulator = false;
+ 	int ret;
+ 
+-	if (!ctx->enabled)
+-		return 0;
+-
++	/* Zero duty may still leave the PWM or supply enabled. */
+ 	pwm_fan_enable_mode_2_state(ctx->enable_mode,
+-				    state,
++				    &state,
+ 				    &enable_regulator);
+ 
+-	if (force_disable)
+-		state->enabled = false;
+-	state->duty_cycle = 0;
+-	ret = pwm_apply_might_sleep(ctx->pwm, state);
++	if (force_disable) {
++		state.enabled = false;
++		enable_regulator = false;
++	}
++	state.duty_cycle = 0;
++	ret = pwm_apply_might_sleep(ctx->pwm, &state);
+ 	if (ret) {
+ 		dev_err(ctx->dev, "failed to disable PWM\n");
+ 		return ret;
+ 	}
+ 
+-	pwm_fan_switch_power(ctx, enable_regulator);
+-
++	ctx->pwm_state = state;
+ 	ctx->enabled = false;
+ 
+-	return 0;
++	/* Keep failures visible and allow a later zero-duty retry. */
++	return pwm_fan_switch_power(ctx, enable_regulator);
+ }
+ 
+ static int  __set_pwm(struct pwm_fan_ctx *ctx, unsigned long pwm)
+@@ -717,8 +717,20 @@ static void pwm_fan_shutdown(struct platform_device *pdev)
+ static int pwm_fan_suspend(struct device *dev)
+ {
+ 	struct pwm_fan_ctx *ctx = dev_get_drvdata(dev);
++	int ret, restore_ret;
+ 
+-	return pwm_fan_power_off(ctx, true);
++	mutex_lock(&ctx->lock);
++	ret = pwm_fan_power_off(ctx, true);
++	if (ret) {
++		/* The PM core need not resume a device whose suspend failed. */
++		restore_ret = __set_pwm(ctx, ctx->pwm_value);
++		if (restore_ret)
++			dev_err(dev, "failed to restore PWM after suspend failure: %d\n",
++				restore_ret);
++	}
++	mutex_unlock(&ctx->lock);
++
++	return ret;
+ }
+ 
+ static int pwm_fan_resume(struct device *dev)
+diff --git a/drivers/iio/adc/qcom-spmi-adc5.c b/drivers/iio/adc/qcom-spmi-adc5.c
+index 83ecd3adf65..83b174f3137 100644
+--- a/drivers/iio/adc/qcom-spmi-adc5.c
++++ b/drivers/iio/adc/qcom-spmi-adc5.c
+@@ -552,6 +552,8 @@ static const struct adc5_channels adc5_chans_pmic[ADC5_MAX_CHANNEL] = {
+ 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+ 	[ADC5_AMUX_THM2]	= ADC5_CHAN_TEMP("amux_thm2", 0,
+ 					SCALE_HW_CALIB_PM5_SMB_TEMP)
++	[ADC5_GPIO1]		= ADC5_CHAN_VOLT("gpio1", 0,
++					SCALE_HW_CALIB_DEFAULT)
+ 	[ADC5_GPIO1_100K_PU]	= ADC5_CHAN_TEMP("gpio1_100k_pu", 0,
+ 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+ 	[ADC5_GPIO2_100K_PU]	= ADC5_CHAN_TEMP("gpio2_100k_pu", 0,
+diff --git a/drivers/leds/rgb/leds-qcom-lpg.c b/drivers/leds/rgb/leds-qcom-lpg.c
+index d7d6518de30..6becc984576 100644
+--- a/drivers/leds/rgb/leds-qcom-lpg.c
++++ b/drivers/leds/rgb/leds-qcom-lpg.c
+@@ -544,13 +544,14 @@ static void lpg_calc_duty(struct lpg_channel *chan, uint64_t duty)
+ 	chan->pwm_value = min(val, max);
+ }
+ 
+-static void lpg_apply_freq(struct lpg_channel *chan)
++static int lpg_apply_freq(struct lpg_channel *chan)
+ {
+ 	unsigned long val;
+ 	struct lpg *lpg = chan->lpg;
++	int ret;
+ 
+ 	if (!chan->enabled)
+-		return;
++		return 0;
+ 
+ 	val = chan->clk_sel;
+ 
+@@ -571,41 +572,43 @@ static void lpg_apply_freq(struct lpg_channel *chan)
+ 		break;
+ 	}
+ 
+-	regmap_write(lpg->map, chan->base + LPG_SIZE_CLK_REG, val);
++	ret = regmap_write(lpg->map, chan->base + LPG_SIZE_CLK_REG, val);
++	if (ret)
++		return ret;
+ 
+ 	val = FIELD_PREP(PWM_FREQ_PRE_DIV_MASK, chan->pre_div_sel) |
+ 	      FIELD_PREP(PWM_FREQ_EXP_MASK, chan->pre_div_exp);
+-	regmap_write(lpg->map, chan->base + LPG_PREDIV_CLK_REG, val);
++	return regmap_write(lpg->map, chan->base + LPG_PREDIV_CLK_REG, val);
+ }
+ 
+ #define LPG_ENABLE_GLITCH_REMOVAL	BIT(5)
+ 
+-static void lpg_enable_glitch(struct lpg_channel *chan)
++static int lpg_enable_glitch(struct lpg_channel *chan)
+ {
+ 	struct lpg *lpg = chan->lpg;
+ 
+-	regmap_update_bits(lpg->map, chan->base + PWM_TYPE_CONFIG_REG,
+-			   LPG_ENABLE_GLITCH_REMOVAL, 0);
++	return regmap_update_bits(lpg->map, chan->base + PWM_TYPE_CONFIG_REG,
++				  LPG_ENABLE_GLITCH_REMOVAL, 0);
+ }
+ 
+-static void lpg_disable_glitch(struct lpg_channel *chan)
++static int lpg_disable_glitch(struct lpg_channel *chan)
+ {
+ 	struct lpg *lpg = chan->lpg;
+ 
+-	regmap_update_bits(lpg->map, chan->base + PWM_TYPE_CONFIG_REG,
+-			   LPG_ENABLE_GLITCH_REMOVAL,
+-			   LPG_ENABLE_GLITCH_REMOVAL);
++	return regmap_update_bits(lpg->map, chan->base + PWM_TYPE_CONFIG_REG,
++				  LPG_ENABLE_GLITCH_REMOVAL,
++				  LPG_ENABLE_GLITCH_REMOVAL);
+ }
+ 
+-static void lpg_apply_pwm_value(struct lpg_channel *chan)
++static int lpg_apply_pwm_value(struct lpg_channel *chan)
+ {
+ 	struct lpg *lpg = chan->lpg;
+ 	u16 val = chan->pwm_value;
+ 
+ 	if (!chan->enabled)
+-		return;
++		return 0;
+ 
+-	regmap_bulk_write(lpg->map, chan->base + PWM_VALUE_REG, &val, sizeof(val));
++	return regmap_bulk_write(lpg->map, chan->base + PWM_VALUE_REG, &val, sizeof(val));
+ }
+ 
+ #define LPG_PATTERN_CONFIG_LO_TO_HI	BIT(4)
+@@ -698,10 +701,11 @@ static void lpg_apply_lut_control(struct lpg_channel *chan)
+ #define LPG_ENABLE_CONTROL_SRC_PWM		BIT(2)
+ #define LPG_ENABLE_CONTROL_RAMP_GEN		BIT(1)
+ 
+-static void lpg_apply_control(struct lpg_channel *chan)
++static int lpg_apply_control(struct lpg_channel *chan)
+ {
+ 	unsigned int ctrl;
+ 	struct lpg *lpg = chan->lpg;
++	int ret;
+ 
+ 	ctrl = LPG_ENABLE_CONTROL_BUFFER_TRISTATE;
+ 
+@@ -713,23 +717,24 @@ static void lpg_apply_control(struct lpg_channel *chan)
+ 	else
+ 		ctrl |= LPG_ENABLE_CONTROL_SRC_PWM;
+ 
+-	regmap_write(lpg->map, chan->base + PWM_ENABLE_CONTROL_REG, ctrl);
++	ret = regmap_write(lpg->map, chan->base + PWM_ENABLE_CONTROL_REG, ctrl);
++	if (ret)
++		return ret;
+ 
+ 	/*
+ 	 * Due to LPG hardware bug, in the PWM mode, having enabled PWM,
+ 	 * We have to write PWM values one more time.
+ 	 */
+-	if (chan->enabled)
+-		lpg_apply_pwm_value(chan);
++	return lpg_apply_pwm_value(chan);
+ }
+ 
+ #define LPG_SYNC_PWM	BIT(0)
+ 
+-static void lpg_apply_sync(struct lpg_channel *chan)
++static int lpg_apply_sync(struct lpg_channel *chan)
+ {
+ 	struct lpg *lpg = chan->lpg;
+ 
+-	regmap_write(lpg->map, chan->base + PWM_SYNC_REG, LPG_SYNC_PWM);
++	return regmap_write(lpg->map, chan->base + PWM_SYNC_REG, LPG_SYNC_PWM);
+ }
+ 
+ static int lpg_parse_dtest(struct lpg *lpg)
+@@ -772,16 +777,20 @@ static int lpg_parse_dtest(struct lpg *lpg)
+ 	return dev_err_probe(lpg->dev, ret, "malformed qcom,dtest\n");
+ }
+ 
+-static void lpg_apply_dtest(struct lpg_channel *chan)
++static int lpg_apply_dtest(struct lpg_channel *chan)
+ {
+ 	struct lpg *lpg = chan->lpg;
++	int ret;
+ 
+ 	if (!chan->dtest_line)
+-		return;
++		return 0;
++
++	ret = regmap_write(lpg->map, chan->base + PWM_SEC_ACCESS_REG, 0xa5);
++	if (ret)
++		return ret;
+ 
+-	regmap_write(lpg->map, chan->base + PWM_SEC_ACCESS_REG, 0xa5);
+-	regmap_write(lpg->map, chan->base + PWM_DTEST_REG(chan->dtest_line),
+-		     chan->dtest_value);
++	return regmap_write(lpg->map, chan->base + PWM_DTEST_REG(chan->dtest_line),
++			    chan->dtest_value);
+ }
+ 
+ static void lpg_apply(struct lpg_channel *chan)
+@@ -1218,6 +1227,31 @@ static int lpg_pwm_request(struct pwm_chip *chip, struct pwm_device *pwm)
+ 	return chan->in_use ? -EBUSY : 0;
+ }
+ 
++/* PWM consumers cannot own LED channels or use their LUT patterns. */
++static int lpg_apply_pwm_state(struct lpg_channel *chan)
++{
++	int ret, cleanup_ret;
++
++	ret = lpg_disable_glitch(chan);
++	if (ret)
++		goto out_glitch;
++	ret = lpg_apply_freq(chan);
++	if (ret)
++		goto out_glitch;
++	ret = lpg_apply_pwm_value(chan);
++	if (ret)
++		goto out_glitch;
++	ret = lpg_apply_control(chan);
++	if (ret)
++		goto out_glitch;
++	ret = lpg_apply_sync(chan);
++
++out_glitch:
++	/* Even a failed bus write may have reached the device. */
++	cleanup_ret = lpg_enable_glitch(chan);
++	return ret ?: cleanup_ret;
++}
++
+ /*
+  * Limitations:
+  * - Updating both duty and period is not done atomically, so the output signal
+@@ -1230,23 +1264,27 @@ static int lpg_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+ {
+ 	struct lpg *lpg = lpg_pwm_from_chip(chip);
+ 	struct lpg_channel *chan = &lpg->channels[pwm->hwpwm];
+-	int ret = 0;
++	struct lpg_channel next;
++	int ret;
+ 
+ 	if (state->polarity != PWM_POLARITY_NORMAL)
+ 		return -EINVAL;
+ 
+ 	mutex_lock(&lpg->lock);
+ 
++	next = *chan;
+ 	if (state->enabled) {
+-		ret = lpg_calc_freq(chan, state->period);
++		ret = lpg_calc_freq(&next, state->period);
+ 		if (ret < 0)
+ 			goto out_unlock;
+ 
+-		lpg_calc_duty(chan, state->duty_cycle);
++		lpg_calc_duty(&next, state->duty_cycle);
+ 	}
+-	chan->enabled = state->enabled;
++	next.enabled = state->enabled;
+ 
+-	lpg_apply(chan);
++	ret = lpg_apply_pwm_state(&next);
++	if (!ret)
++		*chan = next;
+ 
+ out_unlock:
+ 	mutex_unlock(&lpg->lock);
+@@ -1472,7 +1510,7 @@ static int lpg_init_channels(struct lpg *lpg)
+ {
+ 	const struct lpg_data *data = lpg->data;
+ 	struct lpg_channel *chan;
+-	int i;
++	int ret, i;
+ 
+ 	for (i = 0; i < data->num_channels; i++) {
+ 		chan = &lpg->channels[i];
+@@ -1483,7 +1521,10 @@ static int lpg_init_channels(struct lpg *lpg)
+ 		chan->lut_mask = BIT(i);
+ 		chan->sdam_offset = data->channels[i].sdam_offset;
+ 
+-		regmap_read(lpg->map, chan->base + LPG_SUBTYPE_REG, &chan->subtype);
++		ret = regmap_read(lpg->map, chan->base + LPG_SUBTYPE_REG, &chan->subtype);
++		if (ret)
++			return dev_err_probe(lpg->dev, ret,
++					     "failed to read channel %d subtype\n", i);
+ 	}
+ 
+ 	return 0;
+@@ -1510,17 +1551,21 @@ static int lpg_init_triled(struct lpg *lpg)
+ 	}
+ 
+ 	/* Disable automatic trickle charge LED */
+-	if (lpg->triled_has_atc_ctl)
+-		regmap_write(lpg->map, lpg->triled_base + TRI_LED_ATC_CTL, 0);
++	if (lpg->triled_has_atc_ctl) {
++		ret = regmap_write(lpg->map, lpg->triled_base + TRI_LED_ATC_CTL, 0);
++		if (ret)
++			return ret;
++	}
+ 
+ 	/* Configure power source */
+-	if (lpg->triled_has_src_sel)
+-		regmap_write(lpg->map, lpg->triled_base + TRI_LED_SRC_SEL, lpg->triled_src);
++	if (lpg->triled_has_src_sel) {
++		ret = regmap_write(lpg->map, lpg->triled_base + TRI_LED_SRC_SEL, lpg->triled_src);
++		if (ret)
++			return ret;
++	}
+ 
+ 	/* Default all outputs to off */
+-	regmap_write(lpg->map, lpg->triled_base + TRI_LED_EN_CTL, 0);
+-
+-	return 0;
++	return regmap_write(lpg->map, lpg->triled_base + TRI_LED_EN_CTL, 0);
+ }
+ 
+ static int lpg_init_lut(struct lpg *lpg)
+@@ -1644,8 +1689,11 @@ static int lpg_probe(struct platform_device *pdev)
+ 			return ret;
+ 	}
+ 
+-	for (i = 0; i < lpg->num_channels; i++)
+-		lpg_apply_dtest(&lpg->channels[i]);
++	for (i = 0; i < lpg->num_channels; i++) {
++		ret = lpg_apply_dtest(&lpg->channels[i]);
++		if (ret)
++			return dev_err_probe(lpg->dev, ret, "failed to set channel %d dtest\n", i);
++	}
+ 
+ 	return lpg_add_pwm(lpg);
+ }
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index 2a050ff4608..488dd256457 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -205,6 +205,7 @@ static int __pwm_write_waveform(struct pwm_chip *chip, struct pwm_device *pwm, c
+ 	int ret;
+ 
+ 	ret = ops->write_waveform(chip, pwm, wfhw);
++	pwm->state_needs_apply = !!ret;
+ 	trace_pwm_write_waveform(pwm, wfhw, ret);
+ 
+ 	return ret;
+@@ -573,6 +574,7 @@ static void pwm_apply_debug(struct pwm_device *pwm,
+ 
+ 	/* reapply the state that the driver reported being configured. */
+ 	err = chip->ops->apply(chip, pwm, &s1);
++	pwm->state_needs_apply = !!err;
+ 	trace_pwm_apply(pwm, &s1, err);
+ 	if (err) {
+ 		*last = s1;
+@@ -647,7 +649,9 @@ static int __pwm_apply(struct pwm_device *pwm, const struct pwm_state *state)
+ 	chip = pwm->chip;
+ 	ops = chip->ops;
+ 
+-	if (state->period == pwm->state.period &&
++	/* A failed write may have changed hardware without updating .state. */
++	if (!pwm->state_needs_apply &&
++	    state->period == pwm->state.period &&
+ 	    state->duty_cycle == pwm->state.duty_cycle &&
+ 	    state->polarity == pwm->state.polarity &&
+ 	    state->enabled == pwm->state.enabled &&
+@@ -705,6 +709,7 @@ static int __pwm_apply(struct pwm_device *pwm, const struct pwm_state *state)
+ 
+ 	} else {
+ 		err = ops->apply(chip, pwm, state);
++		pwm->state_needs_apply = !!err;
+ 		trace_pwm_apply(pwm, state, err);
+ 		if (err)
+ 			return err;
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index b11ae91723f..97d53ce6119 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -104,6 +104,7 @@ struct pwm_state {
+  * @args: PWM arguments
+  * @state: last applied state
+  * @last: last implemented state (for PWM_DEBUG)
++ * @state_needs_apply: a failed write requires reapplying even an unchanged state
+  */
+ struct pwm_device {
+ 	const char *label;
+@@ -114,6 +115,7 @@ struct pwm_device {
+ 	struct pwm_args args;
+ 	struct pwm_state state;
+ 	struct pwm_state last;
++	bool state_needs_apply;
+ };
+ 
+ /**

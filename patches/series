@@ -1,0 +1,13 @@
+0001-regulator-qcom-add-PM8150L-LCDB-supplies-for-A081.patch
+0002-power-supply-add-A081-FG4-and-charger-support.patch
+0003-hwmon-pwm-add-A081-fan-control-and-board-telemetry-s.patch
+0004-iio-imu-add-Qualcomm-SEE-sensors-for-A081.patch
+0005-wifi-ath11k-support-A081-WCN-power-and-firmware-sequ.patch
+0006-ASoC-qcom-enable-A081-microphone-and-codec-paths.patch
+0007-misc-fastrpc-adapt-the-A081-DSP-memory-path.patch
+0008-drm-panel-add-the-IQIYI-A081-panel-driver.patch
+0009-drm-msm-adapt-A081-display-buffers-and-GMU-startup.patch
+0010-media-i2c-add-A081-IMX471-and-OV7251-sensor-support.patch
+0011-media-qcom-add-A081-CAMSS-timing-and-exposure-contro.patch
+0012-misc-add-the-A081-Nordic-controller-transport.patch
+0013-arm64-dts-qcom-add-the-IQIYI-A081-board.patch
