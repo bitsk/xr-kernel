@@ -8,9 +8,11 @@ cmd=['git','clone','--no-checkout']+(['--shared'] if a.upstream_repo else ['--fi
 subprocess.run(cmd,check=True);subprocess.run(['git','-C',str(out),'checkout','-B','xr/adaptation',lock['commit']],check=True)
 for key in ['user.name','user.email']:
  value=subprocess.check_output(['git','-C',str(r),'config','--get',key],text=True).strip();subprocess.run(['git','-C',str(out),'config',key,value],check=True)
-patches=[str(r/'patches'/name) for name in (r/lock['patch_series']).read_text().splitlines() if name.strip()]
-subprocess.run(['git','-C',str(out),'am',*patches],check=True)
-for directory in ['packaging','devices','debian']:
+patches=[]
+if lock.get('patch_series'):
+ patches=[str(r/'patches'/name) for name in (r/lock['patch_series']).read_text().splitlines() if name.strip()]
+ if patches:subprocess.run(['git','-C',str(out),'am',*patches],check=True)
+for directory in ['packaging','debian']:
  if (r/directory).exists():shutil.copytree(r/directory,out/directory,dirs_exist_ok=True)
 if (r/'include/uapi/linux').exists():
  for header in (r/'include/uapi/linux').glob('*.h'):

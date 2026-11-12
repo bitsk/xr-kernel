@@ -1,9 +1,9 @@
 # xr-kernel
 
-独立维护的 XR 源码补丁栈与 openKylin 打包入口。
+MIX openKylin 的内核来源锁定、UAPI 导出和 Debian 构建封装。
 
-本仓库保存实际功能补丁、上游提交锁定和构建配方。`tools/prepare-source.py` 检出真实上游，在其历史之上逐条应用功能提交；`packaging/build-debs.sh` 在准备后的源码中构建独立软件包。完整上游历史由锁定的上游获取，本仓库的 Git 历史管理适配补丁与打包变更。
+驱动、binding/DTS 和内核配置只在 [bitsk/qiyu-kernel](https://github.com/bitsk/qiyu-kernel) 维护。本仓库通过 upstream.json 选择已验证提交，准备真实 Git 历史，并校验导出的 UAPI；不再维护另一套驱动补丁。旧补丁栈仍保留在 Git 历史中。
 
-离线准备可传 `--upstream-repo /path/to/local/upstream`，或设置 XR_UPSTREAM_REPO。实际内核、模块、DTB、图形选择及设备功能分别验收。源码准备和包构建不自动刷写设备或替换系统活动图形栈。
+`tools/prepare-source.py --output NEW_SOURCE` 准备固定源码；可用 `--upstream-repo` 提供同一上游的 Git 对象缓存。`packaging/build-debs.sh` 只接受锁定的源码提交，构建内核、模块与独立 UAPI 包。配置及可选相机、PD、调度片段来自唯一内核源码仓库。
 
-当前补丁栈包含 13 个硬件子系统提交和独立的内核打包隔离提交；导出的 UAPI 快照在准备源码时与补丁结果逐文件核对。
+构建不刷写设备、不变更启动选择，也不代表新的实机验收。型号用户态、固件安装、温控服务与 rootfs 配方归 openkylin-xr-integration 和 xr-image-tools。

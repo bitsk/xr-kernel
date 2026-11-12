@@ -1,6 +1,13 @@
 {
-  "repository": "https://github.com/torvalds/linux.git",
-  "commit": "c03c1a14507dfaf8b856c2608f9ac216021fc222",
-  "maintenance": "independent patch stack; genuine upstream history restored in prepared source",
-  "patch_series": "patches/series"
+  "repository": "https://github.com/bitsk/qiyu-kernel.git",
+  "commit": "c8c62ae81321f0cf659c2ad07ed0834840d90a81",
+  "maintenance": "packaging wrapper for the canonical kernel; no duplicate driver patch stack",
+  "upstream_linux_repository": "https://github.com/torvalds/linux.git",
+  "profile": "xr-scheduling",
+  "config": "devices/a081/config/kernel.config",
+  "config_fragments": [
+    "devices/a081/config/xr-cameras.config",
+    "devices/a081/config/usb-pd-5v.config",
+    "devices/a081/config/xr-scheduling.config"
+  ]
 }
