@@ -14,7 +14,6 @@ if lock.get('patch_series'):
  if patches:subprocess.run(['git','-C',str(out),'am',*patches],check=True)
 for directory in ['packaging','debian']:
  if (r/directory).exists():shutil.copytree(r/directory,out/directory,dirs_exist_ok=True)
-if (r/'include/uapi/linux').exists():
- for header in (r/'include/uapi/linux').glob('*.h'):
-  if header.read_bytes()!=(out/'include/uapi/linux'/header.name).read_bytes():raise ValueError('Exported UAPI snapshot differs from patch stack')
+for header in (r/'include/uapi').rglob('*.h'):
+ if header.read_bytes()!=(out/'include/uapi'/header.relative_to(r/'include/uapi')).read_bytes():raise ValueError('Exported UAPI snapshot differs from canonical kernel')
 print(json.dumps({'source':str(out),'upstream':lock['commit'],'patches':len(patches),'device_validated':False}))
