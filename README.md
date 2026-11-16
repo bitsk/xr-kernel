@@ -1,9 +1,23 @@
 # xr-kernel
 
-MIX openKylin 的内核来源锁定、UAPI 导出和 Debian 构建封装。
+openKylin XR 的按设备内核来源锁定、UAPI 导出和 Debian 构建封装。
 
-驱动、binding/DTS 和内核配置只在 [bitsk/qiyu-kernel](https://github.com/bitsk/qiyu-kernel) 维护。本仓库通过 upstream.json 选择已验证提交，准备真实 Git 历史，并校验导出的 UAPI；不再维护另一套驱动补丁。旧补丁栈仍保留在 Git 历史中。
+驱动、binding/DTS 和内核配置只在 [bitsk/qiyu-kernel](https://github.com/bitsk/qiyu-kernel) 维护。本仓库通过来源锁选择准确提交，准备真实 Git 历史，并校验导出的 UAPI；不再维护另一套驱动补丁。旧补丁栈仍保留在 Git 历史中。
 
 `tools/prepare-source.py --output NEW_SOURCE` 准备固定源码；可用 `--upstream-repo` 提供同一上游的 Git 对象缓存。`packaging/build-debs.sh` 只接受锁定的源码提交，构建内核、模块与独立 UAPI 包。配置及可选相机、PD、调度片段来自唯一内核源码仓库。
+
+默认设备仍是 `a081`，使用原有 `upstream.json`。显式选择 `--device vr700` 或 `XR_KERNEL_DEVICE=vr700` 时，使用 `devices/vr700/upstream.json`。准备目录内的 `packaging/source-lock.json` 保存本次选择；包构建读取其中的提交、配置和片段，VR700 不合入 A081 相机或调度片段。
+
+从仓库目录构建 VR700 / DREAM Pro 软件包：
+
+```sh
+XR_SOURCE_DIR=/tmp/xr-vr700-source \
+XR_BUILD_DIR=/tmp/xr-vr700-build \
+JOBS=4 packaging/build-debs.sh --device vr700
+```
+
+`XR_SOURCE_DIR` 必须是源码工作区之外的新目录；若使用尚未发布的本地内核提交，额外设置 `XR_UPSTREAM_REPO` 指向包含锁定提交的 `qiyu-kernel` 检出。仅准备源码可使用 `tools/prepare-source.py --device vr700 --output NEW_SOURCE`。
+
+VR700 当前是独立板级启动候选：配置包含 CPU/GPU、双 DSI、UFS、USB2 外设、按键和风扇。无线、DSP 传感器、相机、手柄传输和音频尚未启用，不能继承 A081 固件与私有标定。包构建不代表 openKylin、HyperSpace 或物理显示验收；`packaging/kernel-candidate.py` 仍只适用于既有 A081 基线，不用于 VR700 启动镜像。
 
 构建不刷写设备、不变更启动选择，也不代表新的实机验收。型号用户态、固件安装、温控服务与 rootfs 配方归 openkylin-xr-integration 和 xr-image-tools。
