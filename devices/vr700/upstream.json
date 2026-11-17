@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/bitsk/qiyu-kernel.git",
-  "commit": "c635f3ce41e7f45aed43cb3ac0adae231ecb75f8",
+  "commit": "30d0822d94e202cebb896c69d68e0d8b7010945b",
   "maintenance": "packaging wrapper for the canonical kernel; no duplicate driver patch stack",
   "upstream_linux_repository": "https://github.com/torvalds/linux.git",
   "profile": "core-repair",
