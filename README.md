@@ -18,6 +18,6 @@ JOBS=4 packaging/build-debs.sh --device vr700
 
 `XR_SOURCE_DIR` 必须是源码工作区之外的新目录；若使用尚未发布的本地内核提交，额外设置 `XR_UPSTREAM_REPO` 指向包含锁定提交的 `qiyu-kernel` 检出。仅准备源码可使用 `tools/prepare-source.py --device vr700 --output NEW_SOURCE`。
 
-VR700 当前是独立板级启动候选：配置包含 CPU/GPU、双 DSI、UFS、USB2 外设、按键和风扇。无线、DSP 传感器、相机、手柄传输和音频尚未启用，不能继承 A081 固件与私有标定。包构建不代表 openKylin、HyperSpace 或物理显示验收；`packaging/kernel-candidate.py` 仍只适用于既有 A081 基线，不用于 VR700 启动镜像。
+VR700 是独立板级候选，已包含 CPU/GPU、双 DSI、UFS、USB2 外设、按键、风扇、SLPI/CDSP、四路 OV7251 和手柄 UART。当前能力候选另外接入 QCA6390、电量/充电、5V Type-C sink、Venus 和 ADSP，并提供调度/性能采样接口及 FastRPC 重启资源生命周期修复。音频声卡/功放路由与本机无线板级固件仍需独立验证；VR700 无彩透硬件。不得继承 A081 固件与私有标定。构建不代表实机功能或佩戴验收；VR700 镜像使用 `packaging/build-recovery.py` 的显式输入，`packaging/kernel-candidate.py` 仍只适用于既有 A081 基线。
 
 构建不刷写设备、不变更启动选择，也不代表新的实机验收。型号用户态、固件安装、温控服务与 rootfs 配方归 openkylin-xr-integration 和 xr-image-tools。
