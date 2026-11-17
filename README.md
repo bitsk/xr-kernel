@@ -21,3 +21,5 @@ JOBS=4 packaging/build-debs.sh --device vr700
 VR700 是独立板级候选，已包含 CPU/GPU、双 DSI、UFS、USB2 外设、按键、风扇、SLPI/CDSP、四路 OV7251 和手柄 UART。当前能力候选另外接入 QCA6390、电量/充电、5V Type-C sink、Venus 和 ADSP，并提供调度/性能采样接口及 FastRPC 重启资源生命周期修复。音频声卡/功放路由与本机无线板级固件仍需独立验证；VR700 无彩透硬件。不得继承 A081 固件与私有标定。构建不代表实机功能或佩戴验收；VR700 镜像使用 `packaging/build-recovery.py` 的显式输入，`packaging/kernel-candidate.py` 仍只适用于既有 A081 基线。
 
 构建不刷写设备、不变更启动选择，也不代表新的实机验收。型号用户态、固件安装、温控服务与 rootfs 配方归 openkylin-xr-integration 和 xr-image-tools。
+
+当前 VR700 锁选择 `core-repair`：保留已接入的跟踪硬件，单独验证 FastRPC 与采样能力。完整外围候选启动尚未通过；无线 S2F 电压档位仍待原厂工作态确认，不作为已验证默认。

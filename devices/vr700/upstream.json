@@ -1,9 +1,11 @@
 {
   "repository": "https://github.com/bitsk/qiyu-kernel.git",
-  "commit": "3342efba0f8a73d85fe57f393e7fcc3f2380d48a",
+  "commit": "4eac8397e8c6628771f73c09de9a090fca609c34",
   "maintenance": "packaging wrapper for the canonical kernel; no duplicate driver patch stack",
   "upstream_linux_repository": "https://github.com/torvalds/linux.git",
-  "profile": "capabilities",
+  "profile": "core-repair",
   "config": "devices/vr700/config/kernel.config",
-  "config_fragments": []
+  "config_fragments": [
+    "devices/vr700/config/core.config"
+  ]
 }
