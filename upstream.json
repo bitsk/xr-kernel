@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/bitsk/qiyu-kernel.git",
-  "commit": "29398f794491f0d69274a2346538e7c1bc331a2b",
+  "commit": "151eead31084e86a77a5c35544a7036028a7cdea",
   "maintenance": "packaging wrapper for the canonical kernel; no duplicate driver patch stack",
   "upstream_linux_repository": "https://github.com/torvalds/linux.git",
   "profile": "xr-scheduling",
