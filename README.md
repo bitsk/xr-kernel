@@ -22,4 +22,4 @@ VR700 是独立板级候选，已包含 CPU/GPU、双 DSI、UFS、USB2 外设、
 
 构建不刷写设备、不变更启动选择，也不代表新的实机验收。型号用户态、固件安装、温控服务与 rootfs 配方归 openkylin-xr-integration 和 xr-image-tools。
 
-当前 VR700 锁选择 `core-repair` 诊断版本，和默认版本消费同一份板级 DTS；仅通过模块加载控制隔离探测。FastRPC 等待代、DSP/媒体启动和电源逐项探测已取得实机记录；无线正在分步验证，不能视为完整功能验收。供电范围保留本型号原厂约束，未采用无合法档位的名义 CNSS 固定请求。
+MIX 和 VR700 从同一 qiyu-kernel 提交构建。MIX 使用 xr-scheduling 配置，VR700 使用自身的 tracking 配置，二者都包含各自设备树中的双 AW88261 路由。
